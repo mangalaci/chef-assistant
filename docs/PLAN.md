@@ -7,7 +7,7 @@
 
 | Fázis | Tartalom | Állapot |
 |---|---|---|
-| 0 | Önálló projekt, futó alap | Folyamatban – a projekt kiemelése kész (`mangalaci/chef-assistant`); hátra van: `package.json` átnevezés, `.env`, adatbázis indítása, `gpt-5` modellnév teszt |
+| 0 | Önálló projekt, futó alap | Folyamatban – a projekt kiemelése kész (`mangalaci/chef-assistant`); `package.json` átnevezve, `.env.example` javítva; hátra van: adatbázis indítása, migráció, `gpt-5` modellnév teszt |
 | 1 | Adatmodell + migrációk + HNSW index | – |
 | 2 | Chunking modul | – |
 | 3 | `POST /api/upload` + `POST /api/process` | – |
