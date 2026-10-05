@@ -8,7 +8,7 @@
 | Fázis | Tartalom | Állapot |
 |---|---|---|
 | 0 | Önálló projekt, futó alap | Folyamatban – a projekt kiemelése kész (`mangalaci/chef-assistant`); `package.json` átnevezve, `.env.example` javítva; adatbázis fut (Docker, pgvector 0.8.7), starter migrációk lefutottak; hátra van: `gpt-5` modellnév teszt (OpenAI kulcs kell) |
-| 1 | Adatmodell + migrációk + HNSW index | – |
+| 1 | Adatmodell + migrációk + HNSW index | Kész – `documents` + `embeddings` (FK cascade, HNSW, 3 btree index), migráció `0002`; a `resources` kód törölve |
 | 2 | Chunking modul | – |
 | 3 | `POST /api/upload` + `POST /api/process` | – |
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Részben – a 85 recept bekerült a `data/recipes/` mappába (licenccel, forrásmegjelöléssel) |
