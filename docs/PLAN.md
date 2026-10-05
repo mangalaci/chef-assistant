@@ -9,10 +9,10 @@
 |---|---|---|
 | 0 | Önálló projekt, futó alap | Folyamatban – a projekt kiemelése kész (`mangalaci/chef-assistant`); `package.json` átnevezve, `.env.example` javítva; adatbázis fut (Docker, pgvector 0.8.7), starter migrációk lefutottak; hátra van: `gpt-5` modellnév teszt (OpenAI kulcs kell) |
 | 1 | Adatmodell + migrációk + HNSW index | Kész – `documents` + `embeddings` (FK cascade, HNSW, 3 btree index), migráció `0002`; a `resources` kód törölve |
-| 2 | Chunking modul | – |
+| 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
 | 3 | `POST /api/upload` + `POST /api/process` | – |
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Részben – a 85 recept bekerült a `data/recipes/` mappába (licenccel, forrásmegjelöléssel) |
-| 5 | Keresés, tool-ok, magyar séf system prompt | – |
+| 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | – |
 | 6 | Frontend | – |
 | 7 | Tesztelés és mérés | – |
 | 8 | README + git history | – |
@@ -22,6 +22,21 @@ Windows gépen. Az adatbázis a felhős környezetben is futtatható tesztelésr
 OpenAI-hívásokhoz ott is be kell állítani az `OPENAI_API_KEY`-t.
 
 A feladatleírás: [`docs/hw3/ASSIGNMENT.md`](./hw3/ASSIGNMENT.md).
+A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipynb).
+
+**Döntések a terv elfogadása után:**
+
+- **Reranking (5. fázis, kötelező):** a vektorkeresés ~15–20 jelöltet hoz, ezeket a hw2-ben
+  is használt cross-encoder (`Xenova/ms-marco-MiniLM-L-6-v2`, helyben, Node.js-ben) rendezi
+  újra, és a legjobb 5–6 megy a modellhez. A „nincs találat” küszöb a vektoros hasonlóságon
+  marad, mert a reranker pontszáma nem abszolút (hw2 tanulság). A 7. fázis méri a hatását
+  (reranking nélkül vs. rerankinggel).
+- **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
+  zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
+  `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
+- **2. fázis:** új metaadat a hw2-höz képest: `vegetarian` (kulcsszó-heurisztika a
+  hozzávalókon, szigorú: pl. a csirkealaplé is kizáró) és `prepMinutes` (a hw2
+  `parse_prep_minutes` logikája).
 
 ---
 
