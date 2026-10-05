@@ -7,7 +7,7 @@
 
 | Fázis | Tartalom | Állapot |
 |---|---|---|
-| 0 | Önálló projekt, futó alap | Folyamatban – a projekt kiemelése kész (`mangalaci/chef-assistant`); `package.json` átnevezve, `.env.example` javítva; adatbázis fut (Docker, pgvector 0.8.7), starter migrációk lefutottak; hátra van: `gpt-5` modellnév teszt (OpenAI kulcs kell) |
+| 0 | Önálló projekt, futó alap | Kész – adatbázis fut, migrációk lefutottak, OpenAI kulcs és hálózat beállítva; `CHAT_MODEL` env (alapértelmezés `gpt-5-mini`) |
 | 1 | Adatmodell + migrációk + HNSW index | Kész – `documents` + `embeddings` (FK cascade, HNSW, 3 btree index), migráció `0002`; a `resources` kód törölve |
 | 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
 | 3 | `POST /api/upload` + `POST /api/process` | – |
@@ -31,6 +31,9 @@ A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipy
   újra, és a legjobb 5–6 megy a modellhez. A „nincs találat” küszöb a vektoros hasonlóságon
   marad, mert a reranker pontszáma nem abszolút (hw2 tanulság). A 7. fázis méri a hatását
   (reranking nélkül vs. rerankinggel).
+- **0. fázis, modellválasztás:** a `gpt-5` elérhető, de reasoning modellként lassú: egy egyszavas
+  válasz 5,6–6,7 mp (192 reasoning token), a `gpt-5-mini` 1,6–2,1 mp. Ezért a chat modell a
+  `CHAT_MODEL` env-ből jön, alapértelmezés `gpt-5-mini`; a 7. fázis mindkettőt méri.
 - **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
   zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
   `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
