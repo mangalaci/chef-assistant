@@ -12,7 +12,7 @@
 | 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
 | 3 | `POST /api/upload` + `POST /api/process` | Kész – feltöltés validációval (kiterjesztés, MIME, 1 MB, UTF-8, üres fájl), duplikátum felülírása; feldolgozás chunkolással, 96-os embedding-batchekkel, hibás dokumentum `failed` státusszal; curl-lel tesztelve |
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Kész – lista (`?status=` szűrővel, tartalom nélkül), törlés (a chunkok cascade-del törlődnek, ellenőrizve); `pnpm seed`: 85/85 recept, 254 chunk, 22,7 mp, 34 196 token ≈ $0,0007; újrafuttatva sem duplikál |
-| 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | – |
+| 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Majdnem kész – keresés (küszöb, max. 2 chunk/recept), 4 tool, magyar séf prompt, mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`); **a reranker kódja kész, de a modell letöltését (huggingface.co) a hálózati szabály tiltja, addig vektoros sorrend** |
 | 6 | Frontend | – |
 | 7 | Tesztelés és mérés | – |
 | 8 | README + git history | – |
@@ -34,6 +34,16 @@ A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipy
 - **0. fázis, modellválasztás:** a `gpt-5` elérhető, de reasoning modellként lassú: egy egyszavas
   válasz 5,6–6,7 mp (192 reasoning token), a `gpt-5-mini` 1,6–2,1 mp. Ezért a chat modell a
   `CHAT_MODEL` env-ből jön, alapértelmezés `gpt-5-mini`; a 7. fázis mindkettőt méri.
+- **5. fázis, mérések és döntések:**
+  - Magyar kérdéssel a keresés sokkal gyengébb (legjobb hasonlóság 0,31–0,39, gyakran rossz
+    recept), angollal 0,48–0,71. Ezért a `searchRecipes` angol lekérdezést kap, amit a modell ír.
+  - A hasonlósági küszöb (0,3) csak a zajt szűri: a „spaghetti carbonara” 0,43-mal a *Dad's
+    Spaghetti Sauce*-t hozza. Hogy egy találat tényleg releváns-e, azt a prompt alapján a modell ítéli meg.
+  - A hw2 `category` heurisztikája ételtípusra megbízhatatlan (Channa Masala → side_dish,
+    Enchilada Sauce → main_dish), ezért a vegetáriánus főételeknél a modell a `vegetarian`
+    listából maga válogat.
+  - `REASONING_EFFORT` env (alapértelmezés `low`): ugyanarra a kérdésre medium 26,7 mp,
+    low 9,1 mp, minimal 6,0 mp, hasonló minőséggel.
 - **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
   zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
   `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
