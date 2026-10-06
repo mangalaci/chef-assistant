@@ -1,7 +1,7 @@
 import {
+  customType,
   index,
   integer,
-  jsonb,
   pgTable,
   text,
   varchar,
@@ -10,6 +10,15 @@ import {
 
 import { nanoid } from "@/lib/utils";
 import { documents } from "./documents";
+
+// drizzle-orm 0.31's jsonb() stringifies the value, and postgres.js stringifies
+// jsonb parameters again, so the column ends up holding a JSON *string*. This
+// type hands the object to postgres.js as is, which serializes it once.
+type Json = Record<string, unknown>;
+const jsonb = customType<{ data: Json; driverData: Json }>({
+  dataType: () => "jsonb",
+  toDriver: (value) => value,
+});
 
 // One row per chunk. Columns we filter on are real columns; everything else
 // goes into `metadata`.
@@ -28,7 +37,7 @@ export const embeddings = pgTable(
     sectionType: varchar("section_type", { length: 50 }),
     category: varchar("category", { length: 50 }),
     difficulty: varchar("difficulty", { length: 20 }),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    metadata: jsonb("metadata"),
     embedding: vector("embedding", { dimensions: 1536 }).notNull(),
   },
   (table) => ({
