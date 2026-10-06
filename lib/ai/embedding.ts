@@ -7,22 +7,21 @@ import { embeddings } from '@/lib/db/schema/embeddings';
 
 const embeddingModel = openai.embedding('text-embedding-3-small');
 
-const generateChunks = (input: string): string[] => {
-  return input
-    .trim()
-    .split('.')
-    .filter(i => i !== '');
-};
+// OpenAI accepts up to 2048 inputs per request; smaller batches keep each
+// request well under the token limit and make a failure cheaper to retry.
+const EMBEDDING_BATCH_SIZE = 96;
 
-export const generateEmbeddings = async (
-  value: string,
-): Promise<Array<{ embedding: number[]; content: string }>> => {
-  const chunks = generateChunks(value);
-  const { embeddings } = await embedMany({
-    model: embeddingModel,
-    values: chunks,
-  });
-  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+export const embedChunks = async (values: string[]): Promise<number[][]> => {
+  const result: number[][] = [];
+  for (let i = 0; i < values.length; i += EMBEDDING_BATCH_SIZE) {
+    const { embeddings } = await embedMany({
+      model: embeddingModel,
+      values: values.slice(i, i + EMBEDDING_BATCH_SIZE),
+      maxRetries: 3,
+    });
+    result.push(...embeddings);
+  }
+  return result;
 };
 
 export const generateEmbedding = async (value: string): Promise<number[]> => {

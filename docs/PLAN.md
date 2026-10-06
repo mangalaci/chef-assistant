@@ -10,7 +10,7 @@
 | 0 | Önálló projekt, futó alap | Kész – adatbázis fut, migrációk lefutottak, OpenAI kulcs és hálózat beállítva; `CHAT_MODEL` env (alapértelmezés `gpt-5-mini`) |
 | 1 | Adatmodell + migrációk + HNSW index | Kész – `documents` + `embeddings` (FK cascade, HNSW, 3 btree index), migráció `0002`; a `resources` kód törölve |
 | 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
-| 3 | `POST /api/upload` + `POST /api/process` | – |
+| 3 | `POST /api/upload` + `POST /api/process` | Kész – feltöltés validációval (kiterjesztés, MIME, 1 MB, UTF-8, üres fájl), duplikátum felülírása; feldolgozás chunkolással, 96-os embedding-batchekkel, hibás dokumentum `failed` státusszal; curl-lel tesztelve |
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Részben – a 85 recept bekerült a `data/recipes/` mappába (licenccel, forrásmegjelöléssel) |
 | 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | – |
 | 6 | Frontend | – |
@@ -37,6 +37,9 @@ A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipy
 - **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
   zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
   `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
+- **3. fázis:** a Drizzle 0.31 `jsonb()` oszlopa postgres.js-sel JSON *szövegként* mentette a
+  metaadatot (dupla kódolás), ezért az `embeddings.metadata` saját `customType`-ot kapott.
+  Hibakódok: 400 rossz kérés, 404 ismeretlen dokumentum, 422 egyik fájl sem érvényes, 500 szerverhiba.
 - **2. fázis:** új metaadat a hw2-höz képest: `vegetarian` (kulcsszó-heurisztika a
   hozzávalókon, szigorú: pl. a csirkealaplé is kizáró) és `prepMinutes` (a hw2
   `parse_prep_minutes` logikája).
