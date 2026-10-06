@@ -15,7 +15,7 @@
 | 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Kész – keresés (küszöb, max. 2 chunk/recept), cross-encoder reranking (1,5 mp betöltés, utána 0,5–1,5 mp/keresés), 4 tool, magyar séf prompt; mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`) |
 | 6 | Frontend | Kész – magyar chat (Markdown, 5 tesztkérdés gombként, „Forrás a gyűjteményből” nyom, leállítás/újrapróbálás, sticky beviteli mező), `/documents` (drag&drop, kliens-oldali előszűrés, feltöltés után automatikus feldolgozás, újrafeldolgozás, törlés megerősítéssel, keresés), mobilon kártyás lista; `next build` hibátlan, Playwrighttal tesztelve (`docs/screenshots/`) |
 | 7 | Tesztelés és mérés | Kész – `docs/results/`: keresési pontosság (rerank: MRR 0,77 → 0,85; magyar lekérdezés: 0,20), chunking A/B, negatív esetek, válaszidő (gpt-5-mini átl. 7,2 mp, gpt-5 15,6 mp), system prompt A/B, skálázás 10k chunkig (pontos keresés ~50 ms, HNSW ~4 ms, 96–99% egyezés) |
-| 8 | README + git history | – |
+| 8 | README + git history | Kész – magyar README (indítás, architektúra, API curl-példákkal valódi futásból, chunking, toolok, system prompt, mérési eredmények, tanulságok); `Dockerfile` + `web` szolgáltatás a compose-ban (migráció induláskor, reranker modell a buildben), teljes stack tesztelve |
 
 **Eltérés a tervhez képest:** a fejlesztés Claude Code felhős sessionben folyik, nem a helyi
 Windows gépen. Az adatbázis a felhős környezetben is futtatható tesztelésre; a valódi
@@ -65,6 +65,11 @@ A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipy
     1–3 valódi alternatívával és jelölt általános tudással válaszol.
   - Skálázás: 10 160 chunknál 160 MB (ebből 79 MB HNSW index), pontos keresés ~50 ms, HNSW ~4 ms
     96% (ef_search=40) / 98–99% (ef_search=100) egyezéssel. A Next.js szerver a rerankerrel ~800 MB RAM.
+- **8. fázis, Docker:** a `web` image a build során letölti a reranker modellt (futás közben nem
+  kell Hugging Face), induláskor migrál; a teljes stacken tesztelve: chat, reranking és
+  `docker compose exec web pnpm seed` (85/85, 22,6 mp). Az image kb. 1,8 GB. A Docker Hub a
+  sandboxban 429-et adott, ezért a teszt-build a `mirror.gcr.io` tükörből húzta a node image-et;
+  a repó Dockerfile-ja a szokásos `node:22-bookworm-slim`.
 - **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
   zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
   `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
