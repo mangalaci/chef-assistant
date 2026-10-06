@@ -16,7 +16,11 @@
     "db:check": "drizzle-kit check",
     "chunk:preview": "tsx scripts/chunk-preview.ts",
     "seed": "tsx scripts/seed-recipes.ts",
-    "ask": "tsx scripts/ask.ts"
+    "ask": "tsx scripts/ask.ts",
+    "test:retrieval": "tsx scripts/test-retrieval.ts",
+    "test:latency": "tsx scripts/test-latency.ts",
+    "test:prompts": "tsx scripts/test-prompt-ab.ts",
+    "test:scale": "tsx scripts/test-scale.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.23",

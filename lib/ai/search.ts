@@ -48,7 +48,7 @@ const round = (n: number) => Math.round(n * 1000) / 1000;
 
 export const searchRecipes = async (
   query: string,
-  options: RecipeFilters & { sectionTypes?: string[]; rerank?: boolean } = {},
+  options: RecipeFilters & { sectionTypes?: string[]; rerank?: boolean; limit?: number } = {},
 ) => {
   const started = Date.now();
   const vector = await generateEmbedding(query);
@@ -101,7 +101,7 @@ export const searchRecipes = async (
       similarity: round(c.similarity),
       rerankScore: c.rerankScore === null ? null : round(c.rerankScore),
     });
-    if (hits.length === RESULTS) break;
+    if (hits.length === (options.limit ?? RESULTS)) break;
   }
 
   return {
