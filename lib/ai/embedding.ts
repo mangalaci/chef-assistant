@@ -11,17 +11,22 @@ const embeddingModel = openai.embedding('text-embedding-3-small');
 // request well under the token limit and make a failure cheaper to retry.
 const EMBEDDING_BATCH_SIZE = 96;
 
-export const embedChunks = async (values: string[]): Promise<number[][]> => {
-  const result: number[][] = [];
+// Returns the vectors and the number of tokens OpenAI billed for them.
+export const embedChunks = async (
+  values: string[],
+): Promise<{ vectors: number[][]; tokens: number }> => {
+  const vectors: number[][] = [];
+  let tokens = 0;
   for (let i = 0; i < values.length; i += EMBEDDING_BATCH_SIZE) {
-    const { embeddings } = await embedMany({
+    const { embeddings, usage } = await embedMany({
       model: embeddingModel,
       values: values.slice(i, i + EMBEDDING_BATCH_SIZE),
       maxRetries: 3,
     });
-    result.push(...embeddings);
+    vectors.push(...embeddings);
+    tokens += usage.tokens;
   }
-  return result;
+  return { vectors, tokens };
 };
 
 export const generateEmbedding = async (value: string): Promise<number[]> => {

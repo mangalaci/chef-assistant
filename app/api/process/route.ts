@@ -31,15 +31,17 @@ export async function POST(req: Request) {
   try {
     const started = Date.now();
     const { results, notFound } = await processDocuments(parsed.data.documentIds);
-    const processed = results.filter((r) => r.status === 'processed').length;
-    const chunks = results.reduce((n, r) => n + (r.status === 'processed' ? r.chunkCount : 0), 0);
+    const done = results.flatMap((r) => (r.status === 'processed' ? [r] : []));
+    const chunks = done.reduce((n, r) => n + r.chunkCount, 0);
+    const tokens = done.reduce((n, r) => n + r.tokens, 0);
+    const processed = done.length;
     const ms = Date.now() - started;
-    console.info(`[process] ${processed}/${results.length} processed, ${chunks} chunks, ${ms} ms`);
+    console.info(`[process] ${processed}/${results.length} processed, ${chunks} chunks, ${tokens} tokens, ${ms} ms`);
 
     if (results.length === 0 && notFound.length > 0) {
       return fail(404, 'NOT_FOUND', 'A megadott dokumentumok nem találhatók.', { notFound });
     }
-    return ok({ results, notFound, processed, failed: results.length - processed, chunks, ms });
+    return ok({ results, notFound, processed, failed: results.length - processed, chunks, tokens, ms });
   } catch (error) {
     return internalError('process', error);
   }

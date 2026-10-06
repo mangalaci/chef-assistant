@@ -11,7 +11,7 @@
 | 1 | Adatmodell + migrációk + HNSW index | Kész – `documents` + `embeddings` (FK cascade, HNSW, 3 btree index), migráció `0002`; a `resources` kód törölve |
 | 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
 | 3 | `POST /api/upload` + `POST /api/process` | Kész – feltöltés validációval (kiterjesztés, MIME, 1 MB, UTF-8, üres fájl), duplikátum felülírása; feldolgozás chunkolással, 96-os embedding-batchekkel, hibás dokumentum `failed` státusszal; curl-lel tesztelve |
-| 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Részben – a 85 recept bekerült a `data/recipes/` mappába (licenccel, forrásmegjelöléssel) |
+| 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Kész – lista (`?status=` szűrővel, tartalom nélkül), törlés (a chunkok cascade-del törlődnek, ellenőrizve); `pnpm seed`: 85/85 recept, 254 chunk, 22,7 mp, 34 196 token ≈ $0,0007; újrafuttatva sem duplikál |
 | 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | – |
 | 6 | Frontend | – |
 | 7 | Tesztelés és mérés | – |

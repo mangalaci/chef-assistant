@@ -1,9 +1,9 @@
-import { eq, inArray } from 'drizzle-orm';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 
 import { chunkDocument } from '@/lib/ai/chunking';
 import { embedChunks } from '@/lib/ai/embedding';
 import { db } from '@/lib/db';
-import { documents, type Document } from '@/lib/db/schema/documents';
+import { documents, documentStatus, type Document } from '@/lib/db/schema/documents';
 import { embeddings } from '@/lib/db/schema/embeddings';
 
 // Business logic for documents. API routes and scripts call these functions;
@@ -30,7 +30,7 @@ export type UploadResult =
   | { filename: string; status: 'rejected'; error: string };
 
 export type ProcessResult =
-  | { id: string; filename: string; status: 'processed'; chunkCount: number; ms: number }
+  | { id: string; filename: string; status: 'processed'; chunkCount: number; tokens: number; ms: number }
   | { id: string; filename: string; status: 'failed'; error: string; ms: number };
 
 const extensionOf = (filename: string) =>
@@ -133,7 +133,7 @@ const processOne = async (doc: Document): Promise<ProcessResult> => {
   try {
     const chunks = chunkDocument(doc.filename, doc.content);
     if (chunks.length === 0) throw new Error('A dokumentumból nem keletkezett chunk.');
-    const vectors = await embedChunks(chunks.map((c) => c.content));
+    const { vectors, tokens } = await embedChunks(chunks.map((c) => c.content));
 
     await db.transaction(async (tx) => {
       await tx.delete(embeddings).where(eq(embeddings.documentId, doc.id));
@@ -156,7 +156,7 @@ const processOne = async (doc: Document): Promise<ProcessResult> => {
         .where(eq(documents.id, doc.id));
     });
 
-    return { id: doc.id, filename: doc.filename, status: 'processed', chunkCount: chunks.length, ms: Date.now() - started };
+    return { id: doc.id, filename: doc.filename, status: 'processed', chunkCount: chunks.length, tokens, ms: Date.now() - started };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[process] ${doc.filename}:`, error);
@@ -181,4 +181,35 @@ export const processDocuments = async (documentIds?: string[]) => {
   const results: ProcessResult[] = [];
   for (const doc of docs) results.push(await processOne(doc));
   return { results, notFound };
+};
+
+export type DocumentStatus = (typeof documentStatus.enumValues)[number];
+export const DOCUMENT_STATUSES = documentStatus.enumValues;
+
+// The list leaves out `content`: it can be up to 1 MB per document.
+export const listDocuments = async (status?: DocumentStatus) =>
+  db
+    .select({
+      id: documents.id,
+      filename: documents.filename,
+      mimeType: documents.mimeType,
+      sizeBytes: documents.sizeBytes,
+      status: documents.status,
+      chunkCount: documents.chunkCount,
+      errorMessage: documents.errorMessage,
+      createdAt: documents.createdAt,
+      processedAt: documents.processedAt,
+    })
+    .from(documents)
+    .where(status ? eq(documents.status, status) : undefined)
+    .orderBy(desc(documents.createdAt), asc(documents.filename));
+
+// Deletes the document; its chunks go with it (ON DELETE CASCADE).
+// Returns null when there is no such document.
+export const deleteDocument = async (id: string) => {
+  const [deleted] = await db
+    .delete(documents)
+    .where(eq(documents.id, id))
+    .returning({ id: documents.id, filename: documents.filename, chunkCount: documents.chunkCount });
+  return deleted ?? null;
 };
