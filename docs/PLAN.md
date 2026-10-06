@@ -12,7 +12,7 @@
 | 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
 | 3 | `POST /api/upload` + `POST /api/process` | Kész – feltöltés validációval (kiterjesztés, MIME, 1 MB, UTF-8, üres fájl), duplikátum felülírása; feldolgozás chunkolással, 96-os embedding-batchekkel, hibás dokumentum `failed` státusszal; curl-lel tesztelve |
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Kész – lista (`?status=` szűrővel, tartalom nélkül), törlés (a chunkok cascade-del törlődnek, ellenőrizve); `pnpm seed`: 85/85 recept, 254 chunk, 22,7 mp, 34 196 token ≈ $0,0007; újrafuttatva sem duplikál |
-| 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Majdnem kész – keresés (küszöb, max. 2 chunk/recept), 4 tool, magyar séf prompt, mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`); **a reranker kódja kész, de a modell letöltését (huggingface.co) a hálózati szabály tiltja, addig vektoros sorrend** |
+| 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Kész – keresés (küszöb, max. 2 chunk/recept), cross-encoder reranking (1,5 mp betöltés, utána 0,5–1,5 mp/keresés), 4 tool, magyar séf prompt; mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`) |
 | 6 | Frontend | – |
 | 7 | Tesztelés és mérés | – |
 | 8 | README + git history | – |
@@ -42,6 +42,12 @@ A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipy
   - A hw2 `category` heurisztikája ételtípusra megbízhatatlan (Channa Masala → side_dish,
     Enchilada Sauce → main_dish), ezért a vegetáriánus főételeknél a modell a `vegetarian`
     listából maga válogat.
+  - Reranking (első összevetés, a 7. fázis méri pontosan): a „chicken breast” kérdésnél a
+    *Chicken Schnitzel* (az egyetlen valódi csirkemelles recept) kerül előre, a „spicy food”
+    csípős ételeket hoz csípős szószok helyett; a „vegetarian curry” viszont romlik (a névben
+    „vegetarian” szót tartalmazó recepteket részesíti előnyben). Ugyanaz a vegyes kép, mint a hw2-ben.
+  - A modell hajlamos kéretlen szűrőket adni a kereséshez (pl. easy + main_dish egy csirkés
+    kérdésre → 0 találat); a prompt és a tool-leírás ezt most kifejezetten tiltja.
   - `REASONING_EFFORT` env (alapértelmezés `low`): ugyanarra a kérdésre medium 26,7 mp,
     low 9,1 mp, minimal 6,0 mp, hasonló minőséggel.
 - **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,

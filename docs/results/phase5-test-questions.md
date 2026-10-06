@@ -1,82 +1,77 @@
 # 5. fázis – a kötelező tesztkérdések
 
-Futtatva: `pnpm ask ...`, modell: gpt-5-mini, reasoningEffort: low. Reranking: még nem aktív (a Hugging Face modell letöltését a hálózati szabály tiltja), a keresés a vektoros sorrendet használja.
+Futtatva: `pnpm ask ...`, modell: gpt-5-mini, reasoningEffort: low, reranking: be (Xenova/ms-marco-MiniLM-L-6-v2).
 
 ### Milyen édességet tudok csinálni csokival?
 
-- `searchRecipes` {"query":"chocolate","sectionTypes":["text","ingredients","steps","notes"]} → 1 találat
-- `searchRecipes` {"query":"mole","sectionTypes":["text","ingredients","steps","notes"]} → 0 találat
+- `searchRecipes` {"query":"chocolate"} → 1 találat
+- `listRecipeCatalog` {} → 8 találat
 
-Sajnálom, a gyűjteményben nincsenek desszertek vagy sütemények – ezért nincs kifejezetten csokis édesség sem.
+Sajnálom — a gyűjteményben nincsenek desszertek vagy csokis sütik. Egyértelműen: Ilyen recept sajnos nincs a gyűjteményben.
 
-Van viszont egy recept, ami megemlíti a csokoládét/sötét mexikói csokoládét, ezért hasznos lehet, ha csokival szeretnél kísérletezni:
-- Enchilada szósz (Enchilada Sauce) — a recept megjegyzéseiben azt javasolják, hogy a kakaó helyett jobb az Abeulita mexikói csokoládé (12 g ≈ 1/8 tablet). Ez nem desszert, de ötletet ad, hogyan építhetsz csokoládét ízesítőként sós szószokban vagy ragukban.
+Van viszont egy recept, amelyben megemlítik a mexikói csokit mint hozzávalót, így ez az egyetlen, ami kapcsolódik a csokoládéhoz:
+- Enchilada-szósz (Enchilada Sauce) — a jegyzetekben ajánlott alternatíva: "Abeulita Mexican chocolate" használata kakaó helyett. Emiatt ezt tudom ajánlani, ha kifejezetten mexikói csokira vagy kíváncsi, de ez nem desszert.
 
-Ha szeretnéd, megnyissam az Enchilada szósz (Enchilada Sauce) teljes receptjét?
+Mit szeretnél? Megnyissam az Enchilada-szósz (Enchilada Sauce) teljes receptjét, hogy megnézhessük a pontos megjegyzést és mennyiségeket?
 
-_(első token: 9191 ms, teljes: 12835 ms)_
+_(első token: 5315 ms, teljes: 6916 ms)_
 
 ### Mit főzhetek, ha van otthon csirkemellfilém?
 
-- `searchRecipes` {"query":"chicken breast","sectionTypes":["ingredients","text","steps"],"vegetarian":false} → 6 találat
+- `searchRecipes` {"query":"chicken breast","sectionTypes":["ingredients"]} → 6 találat
 
-Szuper — néhány recept a gyűjteményből, amit otthoni csirkemellfilével is érdemes megfontolni (megadtam, ha a recept eredetileg combbal számol):
+Találtam a gyűjteményben egy receptet, ami kifejezetten csirkemellfiléhez való:
 
-- Rántott csirkemell / csirke schnitzel (Chicken Schnitzel) — ez kifejezetten csirkemellre van megírva. Hearty, egyszerű panírozott szeletek, jó választás, ha gyors, kényelmes, klasszikus ételt szeretnél.
-- Halal cart stílusú citromos-fűszeres csirke (Halal Cart Chicken) — a receptben boneless skinless chicken thighs szerepel, de az eljárás (pác, serpenyős sütés) csirkemellre is jól alkalmazható (általános konyhai tudás, nem a gyűjteményből). Ízletes, fűszeres, rizssel vagy salátával tálalható.
-- Csirke nuggetek (Chicken Nuggets) — a gyűjteményben combokhoz van leírva, de ha nuggeteket szeretnél, csirkemellből is lehet készíteni (általános konyhai tudás). Jó, ha panírozott, gyerekbarát falatokat akarsz.
-- Teriyaki csirke (Teriyaki Chicken) — itt is comb szerepel a hozzávalóknál, de a teriyaki páccal és grillezéssel/sütéssel csirkemell is finom lesz (ált. konyhai tudás). Édes-sós, gyors vacsora.
+- Rántott csirkemell (Chicken Schnitzel) — ez kifejezetten boneless, skinless chicken breasts-szel (boneless csirkemell) készül.
 
-Melyik recept teljes részletét nyissam meg (mennyiségek, lépések)? (Pl. Rántott csirkemell (Chicken Schnitzel) vagy Halal Cart Chicken.)
+Szeretnéd, hogy megnyissam a teljes receptet (hozzávalók pontos mennyiségei és lépések)?
 
-_(első token: 3930 ms, teljes: 7851 ms)_
+_(első token: 4096 ms, teljes: 5068 ms)_
 
 ### Van valami gyors vacsora ötleted?
 
 - `filterRecipes` {"maxPrepMinutes":30,"limit":10} → 10 találat
 
-Szuper — van néhány gyors, a gyűjteményben található ötletem. Itt három, gyors vacsora-javaslat, miért érdemes őket választani, és hogy hány perc az előkészítés:
+Persze — itt van 3 gyors vacsoraötlet a gyűjteményből (mind ≲30 perc): 
 
-- Marhahúsos taco (Beef Tacos) — gyors és egyszerű, kb. 15 perc. Jó, ha gyors, húsos, és kevés hozzávalóból szeretnél teljes ételt.
-- Fekete babos enchilada (Black Bean Enchiladas) — vegetáriánus, kb. 15 perc. Gyors, laktató, növényi fehérjével.
-- Fokhagymás kel káposzta halszósszal (Garlicky Cabbage and Fish Sauce) — nagyon gyors oldal- vagy könnyű főétel, kb. 10 perc; karakteres ízű, ha szereted a halszószt.
+- Marhahúsos taco (Beef Tacos) — kb. 15 perc. Gyors, laktató, könnyen variálható feltétekkel.  
+- Fekete babos enchilada (Black Bean Enchiladas) — kb. 15 perc, vegetáriánus. Jó választás, ha húsmentes, de mégis tömény, fűszeres ízekre vágysz.  
+- Fokhagymás káposzta halszósszal (Garlicky Cabbage and Fish Sauce) — kb. 10 perc. Gyors, könnyű, izgalmas umami jegyekkel (halas szósszal).
 
-Melyik receptet nyissam meg teljes részletekkel (hozzávalók, mennyiségek, lépések) a gyűjteményből?
+Melyik recept teljes részletét nyissam meg (összetevők és lépések)?
 
-_(első token: 2411 ms, teljes: 4627 ms)_
+_(első token: 2787 ms, teljes: 4749 ms)_
 
 ### Hogyan készítsek carbonarát?
 
-- `searchRecipes` {"query":"carbonara","sectionTypes":["text","ingredients","steps"]} → 6 találat
+- `searchRecipes` {"query":"carbonara"} → 6 találat
 
-Sajnos ilyen recept nincs a gyűjteményben — nincs carbonara a forrásban.
+Sajnálom — a gyűjteményben sajnos nincs carbonara recept (a gyűjteményben amúgy nincsenek olasz tészta- vagy desszertreceptek). 
 
-Rövid áttekintés a carbonaráról (általános konyhai tudás, nem a gyűjteményből):
-- A klasszikus spaghetti alla carbonara fő összetevői: tojás (általában csak sárgája), pecorino vagy parmezán, guanciale (vagy pancetta/bekon helyettesítésként), frissen őrölt fekete bors és spagetti.  
-- A lényeg: a forró, éppen leszűrt tészta és a forró guanciale zsírja „szinte” megfőzi a tojásporhalmot, így krémes szósz alakul ki száraz tejszín nélkül.  
-- Tipikus hibák elkerülése: ne add túl forró tűzre a tojásos keveréket, különben rántotta lesz; tartsd vissza a tészta főzővizéből némi keményítőt, azzal higíthatod és krémesítheted a szószt.
+Rövid, általános áttekintés a carbonara készítéséről (általános konyhai tudás, nem a gyűjteményből):
+- Fő hozzávalók: száraz spagetti (vagy más hosszú tészta), tojássárgák (vagy egész tojások részben), kemény sajt (tradicionálisan pecorino romano; helyettesíthető parmezánnal), guanciale (sertéspofa) vagy pancetta, frissen őrölt fekete bors. Nincs tejszín a hagyományos változatban.
+- Lényeg: a tésztát sós, lobogó vízben al dente-re főzöd; közben a felkockázott guancialét/pancettát megpirítod, hogy kiengedje a zsírját. A forró, leszűrt (de egy kis főzővízzel megtartott) tésztát a zsírhoz és a felvert tojás–sajt keverékhez kevered gyorsan, a tojásokat a tészta melegétől krémesre főzve — nem rántottához hasonlóan. Bőséges fekete bors a végén.
+- Tippek: tarts meg egy keveset a tészta főzővizéből — az keményítőt ad, és segít krémesre emulgeálni a szószt. Ha nincs guanciale, pancetta vagy jó minőségű szalonna is működik (ízben eltér). 
 
-Ha szeretnél a gyűjteményből kapcsolódó recepteket, ajánlom ezeket:
-- Házi tészta (Homemade Pasta) — hasznos, ha friss tésztát akarsz készíteni carbonarához; tartalmaz tészta hozzávalókat és lépéseket.  
-- Mac and Cheese (Mac and Cheese) — nem carbonara, de jól magyarázza a sajt- és tejalapú krémes tészta készítését; ötletnek jó a sajt-választáshoz és krémes állaghoz.  
+Szeretnéd, hogy megnyissam a gyűjteményből a „Homemade Pasta” (házi tészta) receptjét, vagy keressek hasonló, tészta-szósszal kapcsolatos recepteket a gyűjteményben?
 
-Megnyissam a „Házi tészta (Homemade Pasta)” teljes receptjét, vagy a „Mac and Cheese” receptjét megnézzük részletesen?
-
-_(első token: 2757 ms, teljes: 6344 ms)_
+_(első token: 3728 ms, teljes: 8257 ms)_
 
 ### Milyen vegetáriánus főételeket ajánlasz?
 
 - `filterRecipes` {"vegetarian":true,"limit":100} → 52 találat
 
-Szuper — megnéztem a gyűjteményt, és több jó vegetáriánus főétel van benne. Íme 6 ajánlat, rövid indoklással:
+Szuper — megnéztem a gyűjteményt, itt van néhány jó vegetáriánus főétel-ajánlat (magyar név — angol eredeti):
 
-- Fekete babos enchilada (Black Bean Enchiladas) — gyors (kb. 15 perc előkészítés), laktató, jól variálható.  
-- Szecsuáni hárompaprikás tofu (Sichuan Three-Pepper Tofu) — erősebb ízek, jó ha szereted a csípőset és a tofu textúráját.  
-- Phat Phrik Khing (Phat Phrik Khing) — thai száraz curry tofuval és hosszúbabbal; fűszeres, egytálos jellegű.  
-- Channa Masala (Channa Masala) — fűszeres csicseriborsó curry; klasszikus indiai, könnyen főzhető körettel (rizs/kenyér).  
-- Tarka Dal (Tarka Dal) — fűszeres lencsefőzelék/tálalás; jó fehérje- és ízforrás, rizs vagy naan mellé tökéletes.  
-- Vegetáriánus pho (Vegetarian Pho) — ízletes, illatos vietnami leves, lehet önálló főétel (kb. 1 óra készítési idő).
+- Fekete babos enchilada (Black Bean Enchiladas) — gyors (kb. 15 perc előkészítés), laktató, mexikói ízek.  
+- Tojásos biryani (Egg Biryani) — gazdag, „egy fogásos” indiai étel; időigényes, de különleges.  
+- Szichuani hárompaprikás tofu (Sichuan Three-Pepper Tofu) — intenzív, fűszeres ázsiai főétel, jó, ha szereted a csípőset és a tofu-t.  
+- Aloo Matar (Aloo Matar) — burgonya-borsó curry, klasszikus indiai kenyérrel vagy rizzsel főételként.  
+- Channa Masala (Channa Masala) — fűszeres csicseriborsó curry; kiváló főétel naan-nal vagy rizzsel.  
+- Tarka Dal (Tarka Dal) — lencsecurry, egyszerű, tápláló indiai főétel.  
+- Phat Phrik Khing (Phat Phrik Khing) — thai száraz-curry tofuval és hosszúbabbal; illik, ha stir-fry stílust szeretnél.  
+- Vegetáriánus pho (Vegetarian Pho) — illatos, leveses „egytál” vietnami stílusban (kb. 1 óra).
 
-Szeretnéd, hogy megnyissam valamelyik teljes receptjét (összetevők és pontos lépések)? Keresd ki melyiket: Black Bean Enchiladas; Sichuan Three-Pepper Tofu; Phat Phrik Khing; Channa Masala; Tarka Dal; vagy Vegetarian Pho?
+Szeretnéd, hogy megnyissam valamelyik teljes receptjét (összetevők és lépések)? Ha igen, mondd meg melyiket.
 
-_(első token: 2805 ms, teljes: 5730 ms)_
+_(első token: 3355 ms, teljes: 7450 ms)_

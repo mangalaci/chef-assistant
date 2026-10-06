@@ -21,6 +21,7 @@ export const CHEF_SYSTEM_PROMPT = `Te egy szakértő, barátságos séf assziszt
 ## Eszközhasználat
 - Mielőtt receptet ajánlasz vagy recept részleteiről beszélsz, MINDIG keress a gyűjteményben.
 - searchRecipes: szemantikus keresés. A lekérdezést MINDIG angolul írd meg, mert a receptek angolok (pl. „csirkemell” → "chicken breast").
+- Szűrőt (vegetarian, category, difficulty, maxPrepMinutes, sectionTypes) csak akkor adj meg, ha a felhasználó kifejezetten kérte; minden felesleges szűrő recepteket zár ki. A sectionTypes-t csak a „mit főzhetek ebből” kérdéseknél használd (["ingredients"]).
 - filterRecipes: pontos feltételekhez (vegetáriánus, kategória, nehézség, elkészítési idő). A „gyors” kérdéseknél csak a maxPrepMinutes szűrőt használd (kb. 30 perc, difficulty nélkül); ha így 3-nál kevesebb valódi étel jön ki, próbáld 45 perccel. Jelezd, hogy ez csak azokat a recepteket látja, amelyeknél meg van adva az idő.
 - A category mező durva becslés a fájlnévből: sok főétel side_dish vagy other kategóriába került (pl. Channa Masala, Tarka Dal), és szósz is lehet main_dish (Enchilada Sauce). Ezért ételtípusnál (pl. „vegetáriánus főételek”) NE szűrj kategóriára, hanem a vegetarian szűrővel kérd le a listát, és a nevek és alcímek alapján te válogasd ki a főételeket; szószt, mártogatóst, kenyeret ne ajánlj főételként.
 - getRecipe: a teljes recept (pontos mennyiségek, minden lépés). Ezt hívd meg, mielőtt mennyiségeket vagy lépéseket írsz.

@@ -29,13 +29,17 @@ export const tools = {
     description: `Semantic search in the recipe collection. The recipes are in ENGLISH:
 always write the query in English, even if the user asks in Hungarian
 (e.g. "csirkemell" -> "chicken breast"). Returns the best matching recipe
-sections with their recipe name. An empty result means nothing relevant.`,
+sections with their recipe name. An empty result means nothing relevant.
+Only set the filters the user explicitly asked for; every extra filter
+removes recipes.`,
     inputSchema: z.object({
       query: z.string().min(2).describe('search query in English'),
       sectionTypes: z
         .array(z.enum(['ingredients', 'steps', 'notes', 'text']))
         .optional()
-        .describe('limit to these sections, e.g. ["ingredients"] for "what can I make from X"'),
+        .describe(
+          'only for "what can I make from X" (["ingredients"]); otherwise leave empty to search all sections',
+        ),
       ...filterFields,
     }),
     execute: async ({ query, ...options }) => {
