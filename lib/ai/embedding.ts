@@ -1,9 +1,5 @@
 import { openai } from '@ai-sdk/openai';
 import { embed, embedMany } from 'ai';
-import { cosineDistance, desc, gt, sql } from 'drizzle-orm';
-
-import { db } from '@/lib/db';
-import { embeddings } from '@/lib/db/schema/embeddings';
 
 const embeddingModel = openai.embedding('text-embedding-3-small');
 
@@ -36,24 +32,4 @@ export const generateEmbedding = async (value: string): Promise<number[]> => {
     value: input,
   });
   return embedding;
-};
-
-export const findRelevantContent = async (userQuery: string) => {
-  const userQueryEmbedded = await generateEmbedding(userQuery);
-  const similarity = sql<number>`1 - (${cosineDistance(
-    embeddings.embedding,
-    userQueryEmbedded,
-  )})`;
-  const similarGuides = await db
-    .select({ content: embeddings.content, similarity })
-    .from(embeddings)
-    .where(gt(similarity, 0.3))
-    .orderBy((t) => desc(t.similarity))
-    .limit(4);
-  
-  if (similarGuides.length === 0) {
-    return "No relevant information found in the knowledge base.";
-  }
-  
-  return similarGuides.map(guide => guide.content).join('\n');
 };
