@@ -280,12 +280,17 @@ export const chunkFixedSize = (
   while (start < clean.length) {
     let end = Math.min(start + maxChars, clean.length);
     if (end < clean.length) {
-      const breakAt = clean.lastIndexOf('\n', end);
-      if (breakAt > start + maxChars / 2) end = breakAt;
+      // Cut at a line break if there is one in the second half, else at a space.
+      const lineBreak = clean.lastIndexOf('\n', end);
+      const space = clean.lastIndexOf(' ', end);
+      if (lineBreak > start + maxChars / 2) end = lineBreak;
+      else if (space > start + maxChars / 2) end = space;
     }
     chunks.push(clean.slice(start, end).trim());
     if (end >= clean.length) break;
-    start = Math.max(end - overlap, start + 1);
+    // The overlap starts at a word boundary, not in the middle of a word.
+    const overlapStart = clean.indexOf(' ', end - overlap);
+    start = overlapStart > start && overlapStart < end ? overlapStart + 1 : end;
   }
   return chunks.filter(Boolean);
 };
