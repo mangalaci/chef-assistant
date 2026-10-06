@@ -1,3 +1,87 @@
+# Megvalósítási terv
+
+## Állapot
+
+> Ezt a táblázatot minden fázis végén frissítjük. Az alatta lévő terv szövege
+> a korábbi (Claude Desktop) sessionben készült, változtatás nélkül átvéve.
+
+| Fázis | Tartalom | Állapot |
+|---|---|---|
+| 0 | Önálló projekt, futó alap | Kész – adatbázis fut, migrációk lefutottak, OpenAI kulcs és hálózat beállítva; `CHAT_MODEL` env (alapértelmezés `gpt-5-mini`) |
+| 1 | Adatmodell + migrációk + HNSW index | Kész – `documents` + `embeddings` (FK cascade, HNSW, 3 btree index), migráció `0002`; a `resources` kód törölve |
+| 2 | Chunking modul | Kész – `lib/ai/chunking.ts` + `pnpm chunk:preview`: 254 chunk, min. 52 karakter, 0 `other` (hw2: 442 / 4 / 93) |
+| 3 | `POST /api/upload` + `POST /api/process` | Kész – feltöltés validációval (kiterjesztés, MIME, 1 MB, UTF-8, üres fájl), duplikátum felülírása; feldolgozás chunkolással, 96-os embedding-batchekkel, hibás dokumentum `failed` státusszal; curl-lel tesztelve |
+| 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Kész – lista (`?status=` szűrővel, tartalom nélkül), törlés (a chunkok cascade-del törlődnek, ellenőrizve); `pnpm seed`: 85/85 recept, 254 chunk, 22,7 mp, 34 196 token ≈ $0,0007; újrafuttatva sem duplikál |
+| 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Kész – keresés (küszöb, max. 2 chunk/recept), cross-encoder reranking (1,5 mp betöltés, utána 0,5–1,5 mp/keresés), 4 tool, magyar séf prompt; mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`) |
+| 6 | Frontend | Kész – magyar chat (Markdown, 5 tesztkérdés gombként, „Forrás a gyűjteményből” nyom, leállítás/újrapróbálás, sticky beviteli mező), `/documents` (drag&drop, kliens-oldali előszűrés, feltöltés után automatikus feldolgozás, újrafeldolgozás, törlés megerősítéssel, keresés), mobilon kártyás lista; `next build` hibátlan, Playwrighttal tesztelve (`docs/screenshots/`) |
+| 7 | Tesztelés és mérés | Kész – `docs/results/`: keresési pontosság (rerank: MRR 0,77 → 0,85; magyar lekérdezés: 0,20), chunking A/B, negatív esetek, válaszidő (gpt-5-mini átl. 7,2 mp, gpt-5 15,6 mp), system prompt A/B, skálázás 10k chunkig (pontos keresés ~50 ms, HNSW ~4 ms, 96–99% egyezés) |
+| 8 | README + git history | Kész – magyar README (indítás, architektúra, API curl-példákkal valódi futásból, chunking, toolok, system prompt, mérési eredmények, tanulságok); `Dockerfile` + `web` szolgáltatás a compose-ban (migráció induláskor, reranker modell a buildben), teljes stack tesztelve |
+
+**Eltérés a tervhez képest:** a fejlesztés Claude Code felhős sessionben folyik, nem a helyi
+Windows gépen. Az adatbázis a felhős környezetben is futtatható tesztelésre; a valódi
+OpenAI-hívásokhoz ott is be kell állítani az `OPENAI_API_KEY`-t.
+
+A feladatleírás: [`docs/hw3/ASSIGNMENT.md`](./hw3/ASSIGNMENT.md).
+A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipynb).
+
+**Döntések a terv elfogadása után:**
+
+- **Reranking (5. fázis, kötelező):** a vektorkeresés ~15–20 jelöltet hoz, ezeket a hw2-ben
+  is használt cross-encoder (`Xenova/ms-marco-MiniLM-L-6-v2`, helyben, Node.js-ben) rendezi
+  újra, és a legjobb 5–6 megy a modellhez. A „nincs találat” küszöb a vektoros hasonlóságon
+  marad, mert a reranker pontszáma nem abszolút (hw2 tanulság). A 7. fázis méri a hatását
+  (reranking nélkül vs. rerankinggel).
+- **0. fázis, modellválasztás:** a `gpt-5` elérhető, de reasoning modellként lassú: egy egyszavas
+  válasz 5,6–6,7 mp (192 reasoning token), a `gpt-5-mini` 1,6–2,1 mp. Ezért a chat modell a
+  `CHAT_MODEL` env-ből jön, alapértelmezés `gpt-5-mini`; a 7. fázis mindkettőt méri.
+- **5. fázis, mérések és döntések:**
+  - Magyar kérdéssel a keresés sokkal gyengébb (legjobb hasonlóság 0,31–0,39, gyakran rossz
+    recept), angollal 0,48–0,71. Ezért a `searchRecipes` angol lekérdezést kap, amit a modell ír.
+  - A hasonlósági küszöb (0,3) csak a zajt szűri: a „spaghetti carbonara” 0,43-mal a *Dad's
+    Spaghetti Sauce*-t hozza. Hogy egy találat tényleg releváns-e, azt a prompt alapján a modell ítéli meg.
+  - A hw2 `category` heurisztikája ételtípusra megbízhatatlan (Channa Masala → side_dish,
+    Enchilada Sauce → main_dish), ezért a vegetáriánus főételeknél a modell a `vegetarian`
+    listából maga válogat.
+  - Reranking (első összevetés, a 7. fázis méri pontosan): a „chicken breast” kérdésnél a
+    *Chicken Schnitzel* (az egyetlen valódi csirkemelles recept) kerül előre, a „spicy food”
+    csípős ételeket hoz csípős szószok helyett; a „vegetarian curry” viszont romlik (a névben
+    „vegetarian” szót tartalmazó recepteket részesíti előnyben). Ugyanaz a vegyes kép, mint a hw2-ben.
+  - A modell hajlamos kéretlen szűrőket adni a kereséshez (pl. easy + main_dish egy csirkés
+    kérdésre → 0 találat); a prompt és a tool-leírás ezt most kifejezetten tiltja.
+  - `REASONING_EFFORT` env (alapértelmezés `low`): ugyanarra a kérdésre medium 26,7 mp,
+    low 9,1 mp, minimal 6,0 mp, hasonló minőséggel.
+- **7. fázis, eredmények (részletek: `docs/results/`):**
+  - Reranking angol lekérdezéssel: Hit@1 0,58 → 0,75, MRR 0,77 → 0,85, kb. +0,5–1 mp/keresés.
+  - Magyar lekérdezés: MRR 0,20 (rerankinggel 0,34) – ez igazolja, hogy a modell angolul keres.
+  - Chunking A/B: a starter `split('.')` darabolása nyers vektoros rangsorban jobb (MRR 0,88), de a
+    legjobb chunkjai közül egyik sem nevezi meg a receptet (pl. „Add 1”), és rerankinggel romlik
+    (0,82); a szekció-alapú + rerank 0,85, és minden chunk megnevezi a receptjét.
+  - Negatív esetek: a legjobb negatív hasonlóság (0,43) csak 0,01-gyel marad el a leggyengébb
+    pozitívtól (0,44), ezért a „nincs találat” döntést a modell hozza, nem egy küszöb.
+  - Válaszidő (5 kérdés × 3): gpt-5-mini átl. 7,2 mp (első token 4,2 mp), gpt-5 átl. 15,6 mp
+    (első token 10,2 mp, max. 31 mp) → a gpt-5-mini marad az alapértelmezés.
+  - System prompt A/B: a starter prompt a két „nincs ilyen recept” kérdésre angolul „Sorry, I don't
+    know.”-t mond, alternatíva nélkül, és szószt ajánl vegetáriánus főételnek; a séf prompt magyarul,
+    1–3 valódi alternatívával és jelölt általános tudással válaszol.
+  - Skálázás: 10 160 chunknál 160 MB (ebből 79 MB HNSW index), pontos keresés ~50 ms, HNSW ~4 ms
+    96% (ef_search=40) / 98–99% (ef_search=100) egyezéssel. A Next.js szerver a rerankerrel ~800 MB RAM.
+- **8. fázis, Docker:** a `web` image a build során letölti a reranker modellt (futás közben nem
+  kell Hugging Face), induláskor migrál; a teljes stacken tesztelve: chat, reranking és
+  `docker compose exec web pnpm seed` (85/85, 22,6 mp). Az image kb. 1,8 GB. A Docker Hub a
+  sandboxban 429-et adott, ezért a teszt-build a `mirror.gcr.io` tükörből húzta a node image-et;
+  a repó Dockerfile-ja a szokásos `node:22-bookworm-slim`.
+- **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
+  zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
+  `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
+- **3. fázis:** a Drizzle 0.31 `jsonb()` oszlopa postgres.js-sel JSON *szövegként* mentette a
+  metaadatot (dupla kódolás), ezért az `embeddings.metadata` saját `customType`-ot kapott.
+  Hibakódok: 400 rossz kérés, 404 ismeretlen dokumentum, 422 egyik fájl sem érvényes, 500 szerverhiba.
+- **2. fázis:** új metaadat a hw2-höz képest: `vegetarian` (kulcsszó-heurisztika a
+  hozzávalókon, szigorú: pl. a csirkealaplé is kizáró) és `prepMinutes` (a hw2
+  `parse_prep_minutes` logikája).
+
+---
+
 # hw3 — Recept RAG asszisztens webapp (`chef-assistant`)
 
 ## Kontextus

@@ -1,5 +1,5 @@
 {
-  "name": "test-application",
+  "name": "chef-assistant",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,11 +13,20 @@
     "db:pull": "drizzle-kit introspect",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:check": "drizzle-kit check"
+    "db:check": "drizzle-kit check",
+    "chunk:preview": "tsx scripts/chunk-preview.ts",
+    "seed": "tsx scripts/seed-recipes.ts",
+    "ask": "tsx scripts/ask.ts",
+    "test:retrieval": "tsx scripts/test-retrieval.ts",
+    "test:latency": "tsx scripts/test-latency.ts",
+    "test:prompts": "tsx scripts/test-prompt-ab.ts",
+    "test:scale": "tsx scripts/test-scale.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.23",
     "@ai-sdk/react": "^2.0.28",
+    "@huggingface/transformers": "3",
+    "@radix-ui/react-alert-dialog": "^1.1.24",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dropdown-menu": "^2.1.1",
     "@radix-ui/react-label": "^2.1.0",
@@ -36,12 +45,15 @@
     "postgres": "^3.4.4",
     "react": "^18",
     "react-dom": "^18",
+    "react-markdown": "9",
+    "remark-gfm": "4",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.20",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

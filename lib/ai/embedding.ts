@@ -1,28 +1,28 @@
 import { openai } from '@ai-sdk/openai';
 import { embed, embedMany } from 'ai';
-import { cosineDistance, desc, gt, sql } from 'drizzle-orm';
-
-import { db } from '@/lib/db';
-import { embeddings } from '@/lib/db/schema/resources';
 
 const embeddingModel = openai.embedding('text-embedding-3-small');
 
-const generateChunks = (input: string): string[] => {
-  return input
-    .trim()
-    .split('.')
-    .filter(i => i !== '');
-};
+// OpenAI accepts up to 2048 inputs per request; smaller batches keep each
+// request well under the token limit and make a failure cheaper to retry.
+const EMBEDDING_BATCH_SIZE = 96;
 
-export const generateEmbeddings = async (
-  value: string,
-): Promise<Array<{ embedding: number[]; content: string }>> => {
-  const chunks = generateChunks(value);
-  const { embeddings } = await embedMany({
-    model: embeddingModel,
-    values: chunks,
-  });
-  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+// Returns the vectors and the number of tokens OpenAI billed for them.
+export const embedChunks = async (
+  values: string[],
+): Promise<{ vectors: number[][]; tokens: number }> => {
+  const vectors: number[][] = [];
+  let tokens = 0;
+  for (let i = 0; i < values.length; i += EMBEDDING_BATCH_SIZE) {
+    const { embeddings, usage } = await embedMany({
+      model: embeddingModel,
+      values: values.slice(i, i + EMBEDDING_BATCH_SIZE),
+      maxRetries: 3,
+    });
+    vectors.push(...embeddings);
+    tokens += usage.tokens;
+  }
+  return { vectors, tokens };
 };
 
 export const generateEmbedding = async (value: string): Promise<number[]> => {
@@ -32,24 +32,4 @@ export const generateEmbedding = async (value: string): Promise<number[]> => {
     value: input,
   });
   return embedding;
-};
-
-export const findRelevantContent = async (userQuery: string) => {
-  const userQueryEmbedded = await generateEmbedding(userQuery);
-  const similarity = sql<number>`1 - (${cosineDistance(
-    embeddings.embedding,
-    userQueryEmbedded,
-  )})`;
-  const similarGuides = await db
-    .select({ content: embeddings.content, similarity })
-    .from(embeddings)
-    .where(gt(similarity, 0.3))
-    .orderBy((t) => desc(t.similarity))
-    .limit(4);
-  
-  if (similarGuides.length === 0) {
-    return "No relevant information found in the knowledge base.";
-  }
-  
-  return similarGuides.map(guide => guide.content).join('\n');
 };
