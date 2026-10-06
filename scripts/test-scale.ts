@@ -1,6 +1,6 @@
 // Scale test: how storage, index build time and search latency grow with the
-// number of chunks. The 254 real chunk vectors are copied with small random
-// noise into a temporary table (embeddings_scale), up to ~10k rows, with the
+// number of chunks. The 254 real chunk vectors plus synthetic ones (mixes of
+// two real vectors) go into a temporary table (embeddings_scale), up to ~10k rows, with the
 // same HNSW index as the real table. Also measures the memory of this Node
 // process with the reranker loaded. The temporary table is dropped at the end.
 //
@@ -15,13 +15,21 @@ import { POSITIVE_CASES } from './eval/cases';
 
 const SIZES = [254, 2540, 10160];
 const K = 20;
+const MAINTENANCE_WORK_MEM = process.env.MAINTENANCE_WORK_MEM ?? '256MB';
 
 const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1).replace('.', ',');
 const toVector = (v: number[]) => `[${v.map((x) => x.toFixed(6)).join(',')}]`;
 
-const noisy = (v: number[], scale: number) => {
-  const out = v.map((x) => x + (Math.random() - 0.5) * scale);
-  const norm = Math.sqrt(out.reduce((a, b) => a + b * b, 0));
+// A synthetic chunk: a random mix of two real chunk vectors plus a little
+// noise. (Plain noisy copies of one vector form tight clusters of 40 near-
+// duplicates, which no HNSW graph with 16 links per node can navigate: that
+// measured the test data, not the index.)
+const synthetic = (base: number[][]) => {
+  const a = base[Math.floor(Math.random() * base.length)];
+  const b = base[Math.floor(Math.random() * base.length)];
+  const w = 0.5 + Math.random() * 0.5;
+  const out = a.map((x, i) => w * x + (1 - w) * b[i] + (Math.random() - 0.5) * 0.01);
+  const norm = Math.sqrt(out.reduce((acc, x) => acc + x * x, 0));
   return out.map((x) => x / norm);
 };
 
@@ -30,7 +38,7 @@ const percentile = (xs: number[], p: number) => {
   return sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))];
 };
 
-const timeQueries = async (queries: number[][], exact: boolean) => {
+const timeQueries = async (queries: number[][], exact: boolean, efSearch = 40) => {
   const times: number[] = [];
   const results: string[][] = [];
   for (const q of queries) {
@@ -38,7 +46,7 @@ const timeQueries = async (queries: number[][], exact: boolean) => {
     const started = performance.now();
     const rows = await db.transaction(async (tx) => {
       if (exact) await tx.execute(sql`SET LOCAL enable_indexscan = off`);
-      else await tx.execute(sql`SET LOCAL hnsw.ef_search = 40`);
+      else await tx.execute(sql.raw(`SET LOCAL hnsw.ef_search = ${efSearch}`));
       return tx.execute<{ id: number }>(
         sql`SELECT id FROM embeddings_scale ORDER BY embedding <=> ${vec}::vector LIMIT ${K}`,
       );
@@ -57,8 +65,8 @@ const main = async () => {
   const queries: number[][] = [];
   for (const c of POSITIVE_CASES) queries.push(await generateEmbedding(c.query));
 
-  console.log(`## Skálázás (${base.length} valódi chunk-vektor zajjal sokszorozva, ${queries.length} lekérdezés, top ${K})\n`);
-  console.log('| chunk | tábla + index (MB) | ebből HNSW index (MB) | index építés (mp) | HNSW átl. / p95 (ms) | pontos keresés átl. / p95 (ms) | HNSW találati egyezés |');
+  console.log(`## Skálázás (${base.length} valódi + szintetikus chunk-vektor, ${queries.length} lekérdezés, top ${K}, maintenance_work_mem ${MAINTENANCE_WORK_MEM})\n`);
+  console.log('| chunk | tábla + index (MB) | ebből HNSW index (MB) | index építés (mp) | pontos keresés átl. / p95 (ms) | HNSW ef_search=40: átl. / p95 (ms), egyezés | HNSW ef_search=100: átl. / p95 (ms), egyezés |');
   console.log('|---|---|---|---|---|---|---|');
 
   await db.execute(sql`DROP TABLE IF EXISTS embeddings_scale`);
@@ -69,14 +77,19 @@ const main = async () => {
       while (rows < size) {
         const batch = [];
         for (let i = 0; i < 254 && rows < size; i++, rows++) {
-          batch.push(sql`(${toVector(rows < base.length ? base[rows] : noisy(base[rows % base.length], 0.02))}::vector)`);
+          batch.push(sql`(${toVector(rows < base.length ? base[rows] : synthetic(base))}::vector)`);
         }
         await db.execute(sql`INSERT INTO embeddings_scale (embedding) VALUES ${sql.join(batch, sql`, `)}`);
       }
 
       await db.execute(sql`DROP INDEX IF EXISTS embeddings_scale_hnsw`);
       const buildStart = performance.now();
-      await db.execute(sql`CREATE INDEX embeddings_scale_hnsw ON embeddings_scale USING hnsw (embedding vector_cosine_ops)`);
+      await db.transaction(async (tx) => {
+        // With the default 64 MB the 10k graph no longer fits in memory and
+        // the build gets slower (pgvector NOTICE); the index stays the same.
+        await tx.execute(sql.raw(`SET LOCAL maintenance_work_mem = '${MAINTENANCE_WORK_MEM}'`));
+        await tx.execute(sql`CREATE INDEX embeddings_scale_hnsw ON embeddings_scale USING hnsw (embedding vector_cosine_ops)`);
+      });
       const buildSec = (performance.now() - buildStart) / 1000;
       await db.execute(sql`ANALYZE embeddings_scale`);
 
@@ -85,17 +98,20 @@ const main = async () => {
                pg_relation_size('embeddings_scale_hnsw') AS idx`);
 
       await timeQueries(queries.slice(0, 2), false); // warm the cache
-      const hnsw = await timeQueries(queries, false);
       const exact = await timeQueries(queries, true);
-      const overlap =
-        hnsw.results.reduce((n, r, i) => n + r.filter((id) => exact.results[i].includes(id)).length, 0) /
-        (queries.length * K);
       const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+      // Share of the exact top K that the approximate (HNSW) search also returns.
+      const hnswCell = async (ef: number) => {
+        const r = await timeQueries(queries, false, ef);
+        const overlap =
+          r.results.reduce((n, res, i) => n + res.filter((id) => exact.results[i].includes(id)).length, 0) /
+          (queries.length * K);
+        return `${avg(r.times).toFixed(1)} / ${percentile(r.times, 95).toFixed(1)}, ${Math.round(overlap * 100)}%`;
+      };
 
       console.log(
         `| ${size} | ${mb(Number(sizes.total))} | ${mb(Number(sizes.idx))} | ${buildSec.toFixed(2).replace('.', ',')} | ` +
-          `${avg(hnsw.times).toFixed(1)} / ${percentile(hnsw.times, 95).toFixed(1)} | ` +
-          `${avg(exact.times).toFixed(1)} / ${percentile(exact.times, 95).toFixed(1)} | ${Math.round(overlap * 100)}% |`,
+          `${avg(exact.times).toFixed(1)} / ${percentile(exact.times, 95).toFixed(1)} | ${await hnswCell(40)} | ${await hnswCell(100)} |`,
       );
     }
   } finally {

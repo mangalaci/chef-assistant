@@ -14,7 +14,7 @@
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Kész – lista (`?status=` szűrővel, tartalom nélkül), törlés (a chunkok cascade-del törlődnek, ellenőrizve); `pnpm seed`: 85/85 recept, 254 chunk, 22,7 mp, 34 196 token ≈ $0,0007; újrafuttatva sem duplikál |
 | 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Kész – keresés (küszöb, max. 2 chunk/recept), cross-encoder reranking (1,5 mp betöltés, utána 0,5–1,5 mp/keresés), 4 tool, magyar séf prompt; mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`) |
 | 6 | Frontend | Kész – magyar chat (Markdown, 5 tesztkérdés gombként, „Forrás a gyűjteményből” nyom, leállítás/újrapróbálás, sticky beviteli mező), `/documents` (drag&drop, kliens-oldali előszűrés, feltöltés után automatikus feldolgozás, újrafeldolgozás, törlés megerősítéssel, keresés), mobilon kártyás lista; `next build` hibátlan, Playwrighttal tesztelve (`docs/screenshots/`) |
-| 7 | Tesztelés és mérés | – |
+| 7 | Tesztelés és mérés | Kész – `docs/results/`: keresési pontosság (rerank: MRR 0,77 → 0,85; magyar lekérdezés: 0,20), chunking A/B, negatív esetek, válaszidő (gpt-5-mini átl. 7,2 mp, gpt-5 15,6 mp), system prompt A/B, skálázás 10k chunkig (pontos keresés ~50 ms, HNSW ~4 ms, 96–99% egyezés) |
 | 8 | README + git history | – |
 
 **Eltérés a tervhez képest:** a fejlesztés Claude Code felhős sessionben folyik, nem a helyi
@@ -50,6 +50,21 @@ A hw2 megoldása: [`docs/hw2/hw2_rag_notebook.ipynb`](./hw2/hw2_rag_notebook.ipy
     kérdésre → 0 találat); a prompt és a tool-leírás ezt most kifejezetten tiltja.
   - `REASONING_EFFORT` env (alapértelmezés `low`): ugyanarra a kérdésre medium 26,7 mp,
     low 9,1 mp, minimal 6,0 mp, hasonló minőséggel.
+- **7. fázis, eredmények (részletek: `docs/results/`):**
+  - Reranking angol lekérdezéssel: Hit@1 0,58 → 0,75, MRR 0,77 → 0,85, kb. +0,5–1 mp/keresés.
+  - Magyar lekérdezés: MRR 0,20 (rerankinggel 0,34) – ez igazolja, hogy a modell angolul keres.
+  - Chunking A/B: a starter `split('.')` darabolása nyers vektoros rangsorban jobb (MRR 0,88), de a
+    legjobb chunkjai közül egyik sem nevezi meg a receptet (pl. „Add 1”), és rerankinggel romlik
+    (0,82); a szekció-alapú + rerank 0,85, és minden chunk megnevezi a receptjét.
+  - Negatív esetek: a legjobb negatív hasonlóság (0,43) csak 0,01-gyel marad el a leggyengébb
+    pozitívtól (0,44), ezért a „nincs találat” döntést a modell hozza, nem egy küszöb.
+  - Válaszidő (5 kérdés × 3): gpt-5-mini átl. 7,2 mp (első token 4,2 mp), gpt-5 átl. 15,6 mp
+    (első token 10,2 mp, max. 31 mp) → a gpt-5-mini marad az alapértelmezés.
+  - System prompt A/B: a starter prompt a két „nincs ilyen recept” kérdésre angolul „Sorry, I don't
+    know.”-t mond, alternatíva nélkül, és szószt ajánl vegetáriánus főételnek; a séf prompt magyarul,
+    1–3 valódi alternatívával és jelölt általános tudással válaszol.
+  - Skálázás: 10 160 chunknál 160 MB (ebből 79 MB HNSW index), pontos keresés ~50 ms, HNSW ~4 ms
+    96% (ef_search=40) / 98–99% (ef_search=100) egyezéssel. A Next.js szerver a rerankerrel ~800 MB RAM.
 - **2. fázis:** az `info` és a `based on` szekció nem lesz önálló chunk (a hw2-ben ezek rövid,
   zajos találatok voltak); az `info` tartalma (idő, adag) minden chunk fejlécébe kerül, a
   `based on` linkjei a metaadatba (`sources`). Ezért lett ~440 helyett 254 chunk.
