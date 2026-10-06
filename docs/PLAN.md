@@ -13,7 +13,7 @@
 | 3 | `POST /api/upload` + `POST /api/process` | Kész – feltöltés validációval (kiterjesztés, MIME, 1 MB, UTF-8, üres fájl), duplikátum felülírása; feldolgozás chunkolással, 96-os embedding-batchekkel, hibás dokumentum `failed` státusszal; curl-lel tesztelve |
 | 4 | `GET /api/documents`, `DELETE /api/documents/:id`, 85 fájl betöltése | Kész – lista (`?status=` szűrővel, tartalom nélkül), törlés (a chunkok cascade-del törlődnek, ellenőrizve); `pnpm seed`: 85/85 recept, 254 chunk, 22,7 mp, 34 196 token ≈ $0,0007; újrafuttatva sem duplikál |
 | 5 | Keresés, **reranking**, tool-ok, magyar séf system prompt | Kész – keresés (küszöb, max. 2 chunk/recept), cross-encoder reranking (1,5 mp betöltés, utána 0,5–1,5 mp/keresés), 4 tool, magyar séf prompt; mind az 5 tesztkérdés hallucináció nélkül (`docs/results/phase5-test-questions.md`) |
-| 6 | Frontend | – |
+| 6 | Frontend | Kész – magyar chat (Markdown, 5 tesztkérdés gombként, „Forrás a gyűjteményből” nyom, leállítás/újrapróbálás, sticky beviteli mező), `/documents` (drag&drop, kliens-oldali előszűrés, feltöltés után automatikus feldolgozás, újrafeldolgozás, törlés megerősítéssel, keresés), mobilon kártyás lista; `next build` hibátlan, Playwrighttal tesztelve (`docs/screenshots/`) |
 | 7 | Tesztelés és mérés | – |
 | 8 | README + git history | – |
 
